@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
             image_paths = [os.path.join(this_data_folder, "img_{:05d}".format(f_i))
                            for f_i in range(start_index, end_index + 1)]
-
+            print(label, start_index, end_index)
             captions = run_images(cli_args, image_paths)
             print(captions)
             exit()

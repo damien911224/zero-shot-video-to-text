@@ -109,28 +109,8 @@ def get_clip_image(image_path, clip_preprocess):
 
     return images
 
-def get_clip_images(video_path, clip_preprocess):
-    cap = cv2.VideoCapture(video_path)
-    FPS = cap.get(cv2.CAP_PROP_FPS)
-    sample_time = FPS // 3
-    imgs = []
-
-    i = 0
-    while (cap.isOpened()):
-        ret, cv2_im = cap.read()
-
-        if ret and i % sample_time == 0:
-            converted = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
-            pil_im = Image.fromarray(converted)
-            imgs.append(pil_im)
-        elif not ret:
-            break
-
-        i += 1
-
-    cap.release()
-
-    images = torch.cat([clip_preprocess(x).unsqueeze(0) for x in imgs])
+def get_clip_images(image_paths, clip_preprocess):
+    images = torch.cat([clip_preprocess(Image.open(p)).unsqueeze(0) for p in image_paths])
 
     return images
 
@@ -169,11 +149,11 @@ def run_image(args, image_path):
 
     return clip_sorted_captions[0]
 
-def run_images(args, image_paths):
+def run_images(args, image_paths, label):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     text_generator = CLIPTextGenerator(**vars(args))
 
-    video_frames = get_clip_video_frames(image_paths, text_generator.clip_preprocess).to(device)
+    video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)
 
     with torch.no_grad():
         frames_fts = text_generator.clip.encode_image(video_frames).detach()
@@ -182,7 +162,8 @@ def run_images(args, image_paths):
         similiarities = frames_fts @ frames_fts.T
         image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
 
-    clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = text_generator.generate(image_fts)
+    clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = \
+        text_generator.generate(image_fts, label)
 
     print(clip_sorted_captions)
 
@@ -191,6 +172,9 @@ def run_images(args, image_paths):
 if __name__ == "__main__":
     torch.set_num_threads(12)
 
+    cli_args = get_parser().parse_args()
+
+    dataset_folder = os.path.join("/mnt/hdd0", "ActivityNet/v1.3", "frames")
     meta_folder = os.path.join("/mnt/ssd0/STDN/meta")
     meta_path = os.path.join(meta_folder, "activity_net.v1.3.min.json")
     with open(meta_path, "r") as fp:
@@ -200,6 +184,30 @@ if __name__ == "__main__":
     with open(data_json_path, "r") as fp:
         data_json = json.load(fp)
 
+    label_dict = dict()
+    with open(os.path.join(meta_folder, "activitynet_classes.txt"), "r") as fp:
+        while True:
+            line = fp.readline()
+            splits = line[:-1].split()
+            if len(splits) < 2:
+                break
+            category = splits[0]
+            class_number = splits[1]
+            label_dict[class_number] = category
 
+    for datum in data_json:
+        splits = datum.split()
+        identity = splits[0]
+        frame_length = splits[1]
+        segments = splits[2:]
+        this_data_folder = os.path.join(dataset_folder, identity, "images")
+        for t_i in range(0, len(segments), 3):
+            class_id = segments[t_i]
+            label = label_dict[str(class_id)]
+            start_index = segments[t_i + 1]
+            end_index = segments[t_i + 2]
 
-    run_images(cli_args, cli_args.data_path)
+            image_paths = [os.path.join(this_data_folder, "img_{:05d}".format(f_i))
+                           for f_i in range(start_index, end_index + 1)]
+
+            run_images(cli_args, image_paths, label)

@@ -254,7 +254,7 @@ class CLIPTextGenerator:
             features = features / features.norm(dim=-1, keepdim=True)
             return features.detach()
 
-    def generate(self, image_features: torch.Tensor):
+    def generate(self, image_features: torch.Tensor, label: String = None):
         self.image_features = image_features
         self.dummy_context_reset()
 

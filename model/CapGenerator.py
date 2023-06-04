@@ -106,8 +106,8 @@ class CLIPTextGenerator:
             str_label = " ".join(label.lower().split("_"))
             self.context_options = ['Video of {} shows'.format(str_label)]
             prompt_len = len(self.context_options[0].split(" "))
-            self.context_options = [""]
-            prompt_len = 0
+            # self.context_options = [""]
+            # prompt_len = 0
         else:
             if randomized_prompt:
                 print('using random prompts...')

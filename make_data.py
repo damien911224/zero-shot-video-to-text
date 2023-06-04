@@ -203,9 +203,9 @@ if __name__ == "__main__":
         this_data_folder = os.path.join(dataset_folder, identity, "images")
         for t_i in range(0, len(segments), 3):
             class_id = segments[t_i]
-            label = label_dict[str(class_id)]
-            start_index = segments[t_i + 1]
-            end_index = segments[t_i + 2]
+            label = label_dict[class_id]
+            start_index = int(segments[t_i + 1])
+            end_index = int(segments[t_i + 2])
 
             image_paths = [os.path.join(this_data_folder, "img_{:05d}".format(f_i))
                            for f_i in range(start_index, end_index + 1)]

@@ -101,15 +101,21 @@ class CLIPTextGenerator:
         self.dummy_optimizer_init = self.dummy_optimizer.state_dict()
 
         # Below options must be 2 tokens only to avoid alignment issues
-        if randomized_prompt:
-            print('using random prompts...')
-            self.context_options = ['Image of', 'Picture of', 'Photo of', 'Video of',
-                                    'Image shows', 'Picture shows', 'Photo shows', 'Video shows',
-                                    'Image showing', 'Picture showing', 'Photo showing', 'Video showing']
-            prompt_len = 2
+        if label is not None:
+            print('using label prompts...')
+            str_label = " ".join(label.lower().split("_"))
+            self.context_options = ['Video of {} shows'.format(str_label)]
+            prompt_len = len(self.context_options[0].split(" "))
         else:
-            self.context_options = ['']
-            prompt_len = 0
+            if randomized_prompt:
+                print('using random prompts...')
+                self.context_options = ['Image of', 'Picture of', 'Photo of', 'Video of',
+                                        'Image shows', 'Picture shows', 'Photo shows', 'Video shows',
+                                        'Image showing', 'Picture showing', 'Photo showing', 'Video showing']
+                prompt_len = 2
+            else:
+                self.context_options = ['']
+                prompt_len = 0
         test_prefixes = [self.context_prefix + choice for choice in self.context_options]
         test_generated_tokens = self.lm_tokenizer.batch_encode_plus(
             test_prefixes, return_tensors='pt', return_attention_mask=False, padding=True)["input_ids"].to(self.device)
@@ -254,7 +260,7 @@ class CLIPTextGenerator:
             features = features / features.norm(dim=-1, keepdim=True)
             return features.detach()
 
-    def generate(self, image_features: torch.Tensor, label: String = None):
+    def generate(self, image_features: torch.Tensor):
         self.image_features = image_features
         self.dummy_context_reset()
 

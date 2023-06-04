@@ -149,7 +149,7 @@ def run_image(args, image_path):
 
     return clip_sorted_captions[0]
 
-def run_images(args, image_paths, label):
+def run_images(args, image_paths):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     text_generator = CLIPTextGenerator(**vars(args))
 
@@ -210,4 +210,6 @@ if __name__ == "__main__":
             image_paths = [os.path.join(this_data_folder, "img_{:05d}".format(f_i))
                            for f_i in range(start_index, end_index + 1)]
 
-            run_images(cli_args, image_paths, label)
+            captions = run_images(cli_args, image_paths)
+            print(captions)
+            exit()

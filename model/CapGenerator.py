@@ -107,6 +107,7 @@ class CLIPTextGenerator:
             str_label = " ".join(label.lower().split("_"))
             self.context_options = ['Video of {} showing that'.format(str_label)]
             prompt_len = len(self.context_options[0].split(" "))
+            print(prompt_len)
             # self.context_options = [""]
             # prompt_len = 0
         else:

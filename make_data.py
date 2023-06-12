@@ -195,7 +195,7 @@ if __name__ == "__main__":
             class_number = splits[1]
             label_dict[class_number] = category
     
-    for datum in data_json[2:]:
+    for datum in data_json[3:]:
         splits = datum.split()
         identity = splits[0]
         frame_length = splits[1]

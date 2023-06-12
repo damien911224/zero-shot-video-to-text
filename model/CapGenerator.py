@@ -102,7 +102,7 @@ class CLIPTextGenerator:
         self.dummy_optimizer_init = self.dummy_optimizer.state_dict()
 
         # Below options must be 2 tokens only to avoid alignment issues
-        if label is not None and False:
+        if label is not None:
             print('using label prompts...')
             str_label = " ".join(label.lower().split("_"))
             self.context_options = ['Video of {} shows'.format(str_label)]

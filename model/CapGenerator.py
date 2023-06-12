@@ -111,7 +111,7 @@ class CLIPTextGenerator:
         if label is not None:
             print('using label prompts...')
             str_label = " ".join(label.lower().split("_"))
-            self.context_options = ['{} where'.format(str_label)]
+            self.context_options = ['{} where the actor(s)'.format(str_label)]
             # self.context_options = ['Image of', 'Picture of', 'Photo of', 'Video of',
                                     # 'Image shows', 'Picture shows', 'Photo shows', 'Video shows',
                                     # 'Image showing', 'Picture showing', 'Photo showing', 'Video showing']

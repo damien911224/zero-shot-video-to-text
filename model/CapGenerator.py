@@ -76,11 +76,14 @@ class CLIPTextGenerator:
         # Initialize Language model
         self.context_prefix = ''
         if lm_model == 'gpt-neo':
-            self.lm_tokenizer = GPT2Tokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
-            self.lm_model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-125M', output_hidden_states=True)
+            self.lm_tokenizer = GPT2Tokenizer.from_pretrained(
+                'EleutherAI/gpt-neo-125M')
+            self.lm_model = GPTNeoForCausalLM.from_pretrained(
+                'EleutherAI/gpt-neo-125M', output_hidden_states=True)
         elif lm_model == 'gpt-2':
             self.lm_tokenizer = GPT2Tokenizer.from_pretrained('gpt2-medium')
-            self.lm_model = GPT2LMHeadModel.from_pretrained('gpt2-medium', output_hidden_states=True)
+            self.lm_model = GPT2LMHeadModel.from_pretrained(
+                'gpt2-medium', output_hidden_states=True)
             self.context_prefix = self.lm_tokenizer.bos_token
         self.lm_tokenizer.pad_token = self.lm_tokenizer.eos_token
         self.lm_model.to(self.device)
@@ -89,10 +92,13 @@ class CLIPTextGenerator:
         for param in self.lm_model.parameters():
             param.requires_grad = False
 
-        dummy_tokens = self.lm_tokenizer.encode([self.lm_tokenizer.bos_token for _ in range(num_dummy_tokens)])
-        dummy_tokens = torch.tensor(dummy_tokens, device=self.device, dtype=torch.long).unsqueeze(0)
+        dummy_tokens = self.lm_tokenizer.encode(
+            [self.lm_tokenizer.bos_token for _ in range(num_dummy_tokens)])
+        dummy_tokens = torch.tensor(
+            dummy_tokens, device=self.device, dtype=torch.long).unsqueeze(0)
         with torch.no_grad():
-            self.dummy_context_init = self.lm_model(dummy_tokens)["past_key_values"]
+            self.dummy_context_init = self.lm_model(
+                dummy_tokens)["past_key_values"]
         # initialize the dummy context as parameters for optimization (can be fed into lm_model)
         self.dummy_context_offset = [(torch.nn.Parameter(torch.zeros(k.shape).type_as(k)),
                                       torch.nn.Parameter(torch.zeros(v.shape).type_as(v)))
@@ -105,7 +111,8 @@ class CLIPTextGenerator:
         if label is not None:
             print('using label prompts...')
             str_label = " ".join(label.lower().split("_"))
-            self.context_options = ['Video of {} shows'.format(str_label)]
+            self.context_options = ['Video, contaning an action of {}, shows'.format(str_label)]
+
             prompt_len = len(self.context_options[0].split(" "))
             # self.context_options = [""]
             # prompt_len = 0
@@ -119,7 +126,8 @@ class CLIPTextGenerator:
             else:
                 self.context_options = ['']
                 prompt_len = 0
-        test_prefixes = [self.context_prefix + choice for choice in self.context_options]
+        test_prefixes = [self.context_prefix +
+                         choice for choice in self.context_options]
         test_generated_tokens = self.lm_tokenizer.batch_encode_plus(
             test_prefixes, return_tensors='pt', return_attention_mask=False, padding=True)["input_ids"].to(self.device)
         # prefix_len = prompt_len + 1
@@ -132,8 +140,10 @@ class CLIPTextGenerator:
         # Special char signifying a space for GPT-2, decoded into space by tokenizer
         spacer = 'Ġ'
         # Avoid tokens that are not completely whitelisted
-        lower_chars = [chr(char_ord) for char_ord in range(ord('a'), ord('z') + 1)]
-        upper_chars = [chr(char_ord) for char_ord in range(ord('A'), ord('Z') + 1)]
+        lower_chars = [chr(char_ord)
+                       for char_ord in range(ord('a'), ord('z') + 1)]
+        upper_chars = [chr(char_ord)
+                       for char_ord in range(ord('A'), ord('Z') + 1)]
         special_chars = [' ', ',', '\'', spacer]
         # The ending token is legit, if forbidden, re-allow it.
         forbidden_tokens = [key for key, value in self.lm_tokenizer.decoder.items()
@@ -144,16 +154,20 @@ class CLIPTextGenerator:
                                  if not set(value).issubset(set(lower_chars + upper_chars))]
         unwanted_later_tokens = [key for key, value in self.lm_tokenizer.decoder.items()
                                  if not set(value).issubset(set(lower_chars + special_chars))]
-        self.first_token_offset = torch.zeros((self.lm_tokenizer.vocab_size,), device=self.device)
+        self.first_token_offset = torch.zeros(
+            (self.lm_tokenizer.vocab_size,), device=self.device)
         self.first_token_offset[unwanted_first_tokens] = -entity_penalty
-        self.other_token_offset = torch.zeros((self.lm_tokenizer.vocab_size,), device=self.device)
+        self.other_token_offset = torch.zeros(
+            (self.lm_tokenizer.vocab_size,), device=self.device)
         self.other_token_offset[unwanted_later_tokens] = -entity_penalty
 
         # A logit updater to avoid the blacklist
-        self.prevent_forbidden_tokens = NoBadWordsLogitsProcessor([[token] for token in forbidden_tokens], self.end_token)
+        self.prevent_forbidden_tokens = NoBadWordsLogitsProcessor(
+            [[token] for token in forbidden_tokens], self.end_token)
 
         # Map from each token to its equivalent tokens, to better eliminate duplications, using a tensor for speed
-        self.token_to_similar_indices = torch.zeros((self.lm_tokenizer.vocab_size, 8)).to(torch.long).to(self.device)
+        self.token_to_similar_indices = torch.zeros(
+            (self.lm_tokenizer.vocab_size, 8)).to(torch.long).to(self.device)
         reduced_token_form = {
             key: value.replace(spacer, '').upper() for key, value in self.lm_tokenizer.decoder.items()
             if key not in forbidden_tokens}
@@ -164,13 +178,15 @@ class CLIPTextGenerator:
                 for index, similar in enumerate(tokens):
                     self.token_to_similar_indices[token][index] = similar
         # Prevent small repetitions of similar tokens
-        self.deter_small_repeat = RepetitionPenaltyLogitsProcessor(repetition_penalty)
+        self.deter_small_repeat = RepetitionPenaltyLogitsProcessor(
+            repetition_penalty)
 
         # Prevent larger repetition of the exact same tokens. Set to 3 to support 2 token word repeat if necessary.
         self.prevent_large_repeat = NoRepeatNGramLogitsProcessor(3)
 
         # Prevent early completion of caption
-        self.prevent_early_finish = MinLengthLogitsProcessor(target_seq_length // 2, self.end_token)
+        self.prevent_early_finish = MinLengthLogitsProcessor(
+            target_seq_length // 2, self.end_token)
 
         # Initialize CLIP
         self.clip, self.clip_preprocess = clip.load("ViT-B/32", device=self.device,
@@ -215,25 +231,30 @@ class CLIPTextGenerator:
 
     def get_img_feature(self, img_path, weights):
         imgs = [Image.open(x) for x in img_path]
-        clip_imgs = [self.clip_preprocess(x).unsqueeze(0).to(self.device) for x in imgs]
+        clip_imgs = [self.clip_preprocess(x).unsqueeze(
+            0).to(self.device) for x in imgs]
 
         with torch.no_grad():
             image_fts = [self.clip.encode_image(x) for x in clip_imgs]
 
             if weights is not None:
-                image_features = sum([x * weights[i] for i, x in enumerate(image_fts)])
+                image_features = sum([x * weights[i]
+                                     for i, x in enumerate(image_fts)])
             else:
                 image_features = sum(image_fts)
 
-            image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+            image_features = image_features / \
+                image_features.norm(dim=-1, keepdim=True)
             return image_features.detach()
 
     def get_video_feature(self, imgs_path):
         imgs = [Image.open(x) for x in imgs_path]
-        clip_imgs = [self.clip_preprocess(x).unsqueeze(0).to(self.device) for x in imgs]
+        clip_imgs = [self.clip_preprocess(x).unsqueeze(
+            0).to(self.device) for x in imgs]
 
         with torch.no_grad():
-            image_fts = torch.cat([self.clip.encode_image(x) for x in clip_imgs])
+            image_fts = torch.cat([self.clip.encode_image(x)
+                                  for x in clip_imgs])
 
             image_features = nn.functional.normalize(image_fts, dim=-1)
 
@@ -245,12 +266,14 @@ class CLIPTextGenerator:
         with torch.no_grad():
             text_features = self.clip.encode_text(clip_texts)
 
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+            text_features = text_features / \
+                text_features.norm(dim=-1, keepdim=True)
         return text_features.detach()
 
     def get_combined_feature(self, img_path, texts, weights_i, weights_t):
         imgs = [Image.open(x) for x in img_path]
-        clip_imgs = [self.clip_preprocess(x).unsqueeze(0).to(self.device) for x in imgs]
+        clip_imgs = [self.clip_preprocess(x).unsqueeze(
+            0).to(self.device) for x in imgs]
         clip_texts = [clip.tokenize(x).to(self.device) for x in texts]
 
         with torch.no_grad():
@@ -259,7 +282,8 @@ class CLIPTextGenerator:
 
             features = sum([x * weights_i[i] for i, x in enumerate(image_fts)])
             if weights_t is not None:
-                features += sum([x * weights_t[i] for i, x in enumerate(text_fts)])
+                features += sum([x * weights_t[i]
+                                for i, x in enumerate(text_fts)])
 
             features = features / features.norm(dim=-1, keepdim=True)
             return features.detach()
@@ -275,7 +299,8 @@ class CLIPTextGenerator:
             sentence_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 self.dummy_optimizer, eta_min=1e-4, T_max=self.sentence_iterations)
         elif self.scheduler_type == self.SchedType.Exponential:
-            sentence_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.dummy_optimizer, gamma=0.9)
+            sentence_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self.dummy_optimizer, gamma=0.9)
         else:
             sentence_scheduler = None
 
@@ -283,8 +308,10 @@ class CLIPTextGenerator:
         avg_perplexities = []
         avg_frame_similarities = []
         for gd_iter in range(self.sentence_iterations):
-            context_tokens = self.lm_tokenizer.encode(self.context_prefix + random.choice(self.context_options))
-            generated_tokens = torch.tensor(context_tokens, device=self.device, dtype=torch.long).unsqueeze(0)
+            context_tokens = self.lm_tokenizer.encode(
+                self.context_prefix + random.choice(self.context_options))
+            generated_tokens = torch.tensor(
+                context_tokens, device=self.device, dtype=torch.long).unsqueeze(0)
 
             clip_losses = []
             fluency_losses = []
@@ -292,9 +319,11 @@ class CLIPTextGenerator:
             for i in range(self.target_seq_length):
                 unshifted_outputs = self.lm_model(generated_tokens)
                 unshifted_logits = unshifted_outputs["logits"][:, -1, :]
-                unshifted_probs = nn.functional.softmax(unshifted_logits, dim=-1)
+                unshifted_probs = nn.functional.softmax(
+                    unshifted_logits, dim=-1)
 
-                shifted_outputs = self.lm_model(generated_tokens, past_key_values=self.dummy_context)
+                shifted_outputs = self.lm_model(
+                    generated_tokens, past_key_values=self.dummy_context)
                 logits = shifted_outputs["logits"][:, -1, :]
                 probs = nn.functional.softmax(logits, dim=-1) + 2e-45
 
@@ -304,7 +333,8 @@ class CLIPTextGenerator:
                 fluency_losses.append(fluency_loss.item())
 
                 # Take gradients
-                loss = (self.clip_scale * clip_loss) + (self.ce_scale * fluency_loss)
+                loss = (self.clip_scale * clip_loss) + \
+                    (self.ce_scale * fluency_loss)
                 loss.backward()
 
                 if self.token_wise:
@@ -313,9 +343,12 @@ class CLIPTextGenerator:
                     self.dummy_optimizer.zero_grad()
 
                 # construct the next generation of sequences
-                next_token = self.sample_next_token(logits, i, generated_tokens)
-                generated_tokens = torch.cat((generated_tokens, next_token), dim=1)
-                total_perplexity += torch.gather(unshifted_probs.log(), 1, next_token).sum(dim=0)
+                next_token = self.sample_next_token(
+                    logits, i, generated_tokens)
+                generated_tokens = torch.cat(
+                    (generated_tokens, next_token), dim=1)
+                total_perplexity += torch.gather(
+                    unshifted_probs.log(), 1, next_token).sum(dim=0)
 
                 if next_token == self.end_token:
                     break
@@ -330,50 +363,65 @@ class CLIPTextGenerator:
                 sentence_scheduler.step()
 
             # Compute, log & record training intermediate results
-            decoded_text = self.lm_tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+            decoded_text = self.lm_tokenizer.batch_decode(
+                generated_tokens, skip_special_tokens=True)
             avg_perplexity = total_perplexity / i
             avg_frame_sim = self.text_to_video_similarity(decoded_text)
             print(f"(Index: {gd_iter}, Len: {i + 1}, "
-                         f"Avg clip: {avg_frame_sim.mean().item():.4f}, "
-                         f"Avg ppl: {avg_perplexity.mean().item():.4f}): "
-                         f"\"{decoded_text}\"")
+                  f"Avg clip: {avg_frame_sim.mean().item():.4f}, "
+                  f"Avg ppl: {avg_perplexity.mean().item():.4f}): "
+                  f"\"{decoded_text}\"")
             decoded_options.extend(decoded_text)
             avg_perplexities.append(avg_perplexity)
             avg_frame_similarities.append(avg_frame_sim.mean(-1))
 
-            assert len(clip_losses) == len(fluency_losses), "expect balanced amount of losses per type"
-            logging.debug(f'Unscaled CLIP loss: {sum(clip_losses)}, Unscaled Fluency loss: {sum(fluency_losses)}')
+            assert len(clip_losses) == len(
+                fluency_losses), "expect balanced amount of losses per type"
+            logging.debug(
+                f'Unscaled CLIP loss: {sum(clip_losses)}, Unscaled Fluency loss: {sum(fluency_losses)}')
 
         avg_frame_similarities = torch.cat(avg_frame_similarities)
-        caption_to_all_frame_prob = nn.functional.softmax(avg_frame_similarities * self.clip_scale)
-        caption_to_language_prob = nn.functional.softmax(torch.cat(avg_perplexities, dim=0) * self.ce_scale, 0)
+        caption_to_all_frame_prob = nn.functional.softmax(
+            avg_frame_similarities * self.clip_scale)
+        caption_to_language_prob = nn.functional.softmax(
+            torch.cat(avg_perplexities, dim=0) * self.ce_scale, 0)
         mixed_score = caption_to_all_frame_prob * caption_to_language_prob
 
-        clip_ordered_caption_prob, clip_caption_ordering = avg_frame_similarities.sort(descending=True)
-        mixed_ordered_caption_prob, mixed_caption_ordering = mixed_score.sort(descending=True)
+        clip_ordered_caption_prob, clip_caption_ordering = avg_frame_similarities.sort(
+            descending=True)
+        mixed_ordered_caption_prob, mixed_caption_ordering = mixed_score.sort(
+            descending=True)
         logging.debug(f"The 'best' clip score & sorted indices: "
                       f"{list(zip(clip_ordered_caption_prob.tolist(), clip_caption_ordering.tolist()))}")
         logging.debug(f"The 'best' mixed score & sorted indices: "
                       f"{list(zip(mixed_ordered_caption_prob.tolist(), mixed_caption_ordering.tolist()))}")
-        clip_sorted_captions = [decoded_options[index] for index in clip_caption_ordering]
-        mixed_sorted_captions = [decoded_options[index] for index in mixed_caption_ordering]
-        beam_tokens, beam_caps = self.decode_beam_search(self.dummy_context, self.beam_size)
+        clip_sorted_captions = [decoded_options[index]
+                                for index in clip_caption_ordering]
+        mixed_sorted_captions = [decoded_options[index]
+                                 for index in mixed_caption_ordering]
+        beam_tokens, beam_caps = self.decode_beam_search(
+            self.dummy_context, self.beam_size)
 
         return clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps
 
     def decode_beam_search(self, shifted_context, beam_size, prefix_text='Image of a'):
-        context_tokens = self.lm_tokenizer.encode(self.context_prefix + prefix_text)
-        generated_tokens = torch.tensor(context_tokens, device=self.device, dtype=torch.long).unsqueeze(0)
+        context_tokens = self.lm_tokenizer.encode(
+            self.context_prefix + prefix_text)
+        generated_tokens = torch.tensor(
+            context_tokens, device=self.device, dtype=torch.long).unsqueeze(0)
         gen_tokens = None
         scores = None
         seq_lengths = torch.ones(beam_size, device=self.device)
-        is_stopped = torch.zeros(beam_size, device=self.device, dtype=torch.bool)
+        is_stopped = torch.zeros(
+            beam_size, device=self.device, dtype=torch.bool)
 
         for i in range(self.target_seq_length):
             with torch.no_grad():
-                shifted_outputs = self.lm_model(generated_tokens, past_key_values=shifted_context)
+                shifted_outputs = self.lm_model(
+                    generated_tokens, past_key_values=shifted_context)
             logits = shifted_outputs["logits"][:, -1, :]
-            logits = self.update_special_tokens_logits(generated_tokens, i, logits)
+            logits = self.update_special_tokens_logits(
+                generated_tokens, i, logits)
             logits = torch.log_softmax(logits, dim=-1)
 
             if scores is None:
@@ -382,7 +430,8 @@ class CLIPTextGenerator:
                                             shifted_context[lid][1].repeat(beam_size, 1, 1, 1))
                 scores, next_tokens = logits.topk(beam_size, -1)
                 generated_tokens = generated_tokens.repeat(beam_size, 1)
-                next_tokens, scores = next_tokens.permute(1, 0), scores.squeeze(0)
+                next_tokens, scores = next_tokens.permute(
+                    1, 0), scores.squeeze(0)
                 gen_tokens = next_tokens
             else:
                 logits[is_stopped] = -float(np.inf)
@@ -390,7 +439,8 @@ class CLIPTextGenerator:
                 scores_sum = scores[:, None] + logits
                 seq_lengths[~is_stopped] += 1
                 scores_sum_average = scores_sum / seq_lengths[:, None]
-                scores_sum_average, next_tokens = scores_sum_average.view(-1).topk(beam_size, -1)
+                scores_sum_average, next_tokens = scores_sum_average.view(
+                    -1).topk(beam_size, -1)
                 next_tokens_source = next_tokens // scores_sum.shape[1]
                 seq_lengths = seq_lengths[next_tokens_source]
                 next_tokens = next_tokens % scores_sum.shape[1]
@@ -400,7 +450,8 @@ class CLIPTextGenerator:
                 generated_tokens = generated_tokens[next_tokens_source]
                 scores = scores_sum_average * seq_lengths
                 is_stopped = is_stopped[next_tokens_source]
-            generated_tokens = torch.cat((generated_tokens, next_tokens), dim=1)
+            generated_tokens = torch.cat(
+                (generated_tokens, next_tokens), dim=1)
             is_stopped = is_stopped + next_tokens.eq(self.end_token).squeeze()
             if is_stopped.all():
                 break
@@ -421,17 +472,21 @@ class CLIPTextGenerator:
         return generated_tokens, output_texts
 
     def sample_next_token(self, logits, i, generated_tokens):
-        fixed_logits = self.update_special_tokens_logits(generated_tokens, i, logits.detach())
-        option_logits, next_token_options = fixed_logits.topk(self.sampling_top_k)
+        fixed_logits = self.update_special_tokens_logits(
+            generated_tokens, i, logits.detach())
+        option_logits, next_token_options = fixed_logits.topk(
+            self.sampling_top_k)
         option_probs = nn.functional.softmax(option_logits, dim=-1)
-        next_token_option_index = torch.multinomial(option_probs, num_samples=1)[0]
+        next_token_option_index = torch.multinomial(
+            option_probs, num_samples=1)[0]
         return next_token_options[:, next_token_option_index]
 
     def update_special_tokens_logits(self, context_tokens, i, logits):
         # Deter tokens that appeared in similar form in recent history (single repeats allowed for remote sentences)
         history_len = 16
         history_tokens = context_tokens[:, -history_len:]
-        history_similar_tokens = self.token_to_similar_indices[history_tokens].view((-1, history_tokens.shape[1] * 8))
+        history_similar_tokens = self.token_to_similar_indices[history_tokens].view(
+            (-1, history_tokens.shape[1] * 8))
         logits = self.deter_small_repeat(history_similar_tokens, logits)
 
         # Prevent exact duplicate n-grams from anywhere in context(not including similarities)
@@ -444,7 +499,8 @@ class CLIPTextGenerator:
         logits = self.prevent_forbidden_tokens(context_tokens, logits)
 
         # Reduce probability of unwanted styled words (entities, etc...)
-        logits += (self.first_token_offset if i == 0 else self.other_token_offset).unsqueeze(0)
+        logits += (self.first_token_offset if i ==
+                   0 else self.other_token_offset).unsqueeze(0)
 
         # Give a tiny constant nudge towards ending, since we tend to end up with too long sentences
         logits[:, self.end_token] += self.ending_bonus
@@ -454,7 +510,8 @@ class CLIPTextGenerator:
         if i >= self.target_seq_length - self.prevent_early_finish.min_length:
             ending_threshold = logits[:, self.end_token].clone()
             # disqualify all logit below the set of active considerations (and reserve a spot for the ending option)
-            top_threshold_values, top_threshold_indices = logits.topk(self.sampling_top_k, 1)
+            top_threshold_values, top_threshold_indices = logits.topk(
+                self.sampling_top_k, 1)
             logits[logits < top_threshold_values[:, -1:]] = -np.inf
             logits[:, self.end_token] = ending_threshold
             # Remove the last candidate if ending isn't yet considered
@@ -474,17 +531,21 @@ class CLIPTextGenerator:
     def clip_loss(self, probs, context_tokens, samples: int):
         _, top_next_tokens = probs.topk(samples, -1)
 
-        prefix_texts = self.lm_tokenizer.batch_decode(context_tokens, skip_special_tokens=True)
+        prefix_texts = self.lm_tokenizer.batch_decode(
+            context_tokens, skip_special_tokens=True)
 
         prefix_losses = []
         for prefix_text, prefix_top_next_tokens, prefix_next_token_prob in zip(prefix_texts, top_next_tokens, probs):
             # Get the embedding of all likely continuations for the prefix
             top_prefix_continuation = []
             for next_token in prefix_top_next_tokens:
-                top_prefix_continuation.append(prefix_text + self.lm_tokenizer.decode(next_token))
+                top_prefix_continuation.append(
+                    prefix_text + self.lm_tokenizer.decode(next_token))
 
-            cont_video_similarity = self.text_to_video_similarity(top_prefix_continuation)
-            cont_video_prob = nn.functional.softmax(cont_video_similarity / self.clip_loss_temperature, dim=0)
+            cont_video_similarity = self.text_to_video_similarity(
+                top_prefix_continuation)
+            cont_video_prob = nn.functional.softmax(
+                cont_video_similarity / self.clip_loss_temperature, dim=0)
 
             # Take the clip probabilities as ground truth prior over the continuations. Take cross entropy of predicted
             # next tokens based on this target prior.

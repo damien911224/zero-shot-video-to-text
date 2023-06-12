@@ -124,6 +124,8 @@ class CLIPTextGenerator:
         test_generated_tokens = self.lm_tokenizer.batch_encode_plus(
             test_prefixes, return_tensors='pt', return_attention_mask=False, padding=True)["input_ids"].to(self.device)
         prefix_len = prompt_len + 1
+        print(test_generated_tokens.shape[1])
+        exit()
         assert test_generated_tokens.shape[1] == prefix_len, \
             f"All appended context options must be of exactly length {prefix_len}!"
 

@@ -213,5 +213,5 @@ if __name__ == "__main__":
                            for f_i in range(start_index, end_index + 1)]
             print(label, start_index, end_index)
             captions = run_images(cli_args, image_paths)
-            print(captions[-1])
+            print(captions)
             exit()

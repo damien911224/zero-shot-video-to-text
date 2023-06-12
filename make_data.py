@@ -175,7 +175,7 @@ if __name__ == "__main__":
     cli_args = get_parser().parse_args()
 
     dataset_folder = os.path.join("/mnt/hdd0", "ActivityNet/v1.3", "frames")
-    meta_folder = os.path.join("/mnt/ssd0, STDN/meta")
+    meta_folder = os.path.join("/mnt/ssd0", "STDN/meta")
     meta_path = os.path.join(meta_folder, "activity_net.v1.3.min.json")
     with open(meta_path, "r") as fp:
         meta_dict = json.load(fp)

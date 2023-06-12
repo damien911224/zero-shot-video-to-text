@@ -210,7 +210,7 @@ if __name__ == "__main__":
             end_index = int(segments[t_i + 2])
             cli_args.label = label
             print(identity, label, start_index, end_index)
-            for s_i in range(start_index, end_index + 1, frame_width)
+            for s_i in range(start_index, end_index + 1, frame_width):
                 image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
                             for f_i in range(s_i, min(s_i + frame_width, end_index) + 1)]
                 captions = run_images(cli_args, image_paths)

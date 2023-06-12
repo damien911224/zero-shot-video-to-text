@@ -195,6 +195,8 @@ if __name__ == "__main__":
             class_number = splits[1]
             label_dict[class_number] = category
 
+    import random
+    random.shuffle(data_json)
     for datum in data_json:
         splits = datum.split()
         identity = splits[0]
@@ -211,5 +213,5 @@ if __name__ == "__main__":
                            for f_i in range(start_index, end_index + 1)]
             print(label, start_index, end_index)
             captions = run_images(cli_args, image_paths)
-            print(captions)
+            print(captions[-1])
             exit()

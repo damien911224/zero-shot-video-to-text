@@ -105,7 +105,7 @@ class CLIPTextGenerator:
         if label is not None:
             print('using label prompts...')
             str_label = " ".join(label.lower().split("_"))
-            self.context_options = ['Video of {} shows'.format(str_label)]
+            self.context_options = ['Video of {} showing that'.format(str_label)]
             prompt_len = len(self.context_options[0].split(" "))
             # self.context_options = [""]
             # prompt_len = 0

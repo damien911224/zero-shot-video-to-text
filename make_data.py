@@ -14,17 +14,22 @@ import numpy as np
 import cv2
 from PIL import Image
 
+
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--randomized_prompt", action="store_true")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--lm_model", type=str, default="gpt-2", help="gpt-2 or gpt-neo")
-    parser.add_argument("--db_filter_path", type=str, default=None, help="file to filter db items, e.g karpathy split")
-    parser.add_argument("--clip_checkpoints", type=str, default="./clip_checkpoints", help="path to CLIP")
+    parser.add_argument("--lm_model", type=str,
+                        default="gpt-2", help="gpt-2 or gpt-neo")
+    parser.add_argument("--db_filter_path", type=str, default=None,
+                        help="file to filter db items, e.g karpathy split")
+    parser.add_argument("--clip_checkpoints", type=str,
+                        default="./clip_checkpoints", help="path to CLIP")
     parser.add_argument("--target_seq_length", type=int, default=15)
     parser.add_argument("--cond_text", type=str, default="Image of a")
-    parser.add_argument("--token_wise", action="store_true", help="Should we step the optimization at each token gen")
+    parser.add_argument("--token_wise", action="store_true",
+                        help="Should we step the optimization at each token gen")
     parser.add_argument("--num_dummy_tokens", type=int, default=5)
     parser.add_argument("--sentence_iterations", type=int, default=30)
     parser.add_argument("--sampling_top_k", type=int, default=3)
@@ -35,20 +40,27 @@ def get_parser():
     parser.add_argument("--ce_scale", type=float, default=0.8)
     parser.add_argument("--beam_size", type=int, default=5)
     parser.add_argument("--learning_rate", type=float, default=0.006)
-    parser.add_argument("--scheduler_type", type=CLIPTextGenerator.SchedType, default='cosine')
+    parser.add_argument("--scheduler_type",
+                        type=CLIPTextGenerator.SchedType, default='cosine')
     parser.add_argument("--weight_decay_scale", type=float, default=0.3)
-    parser.add_argument("--repetition_penalty", type=float, default=2.0, help='How much much to deter deter repeats')
-    parser.add_argument("--entity_penalty", type=float, default=2, help='How much to deter CapsLock in middle of sent')
-    parser.add_argument("--ending_bonus", type=float, default=2, help='How much to help the sentence to end')
-    parser.add_argument("--end_token", type=str, default=".", help="Token to end text")
+    parser.add_argument("--repetition_penalty", type=float,
+                        default=2.0, help='How much much to deter deter repeats')
+    parser.add_argument("--entity_penalty", type=float, default=2,
+                        help='How much to deter CapsLock in middle of sent')
+    parser.add_argument("--ending_bonus", type=float, default=2,
+                        help='How much to help the sentence to end')
+    parser.add_argument("--end_token", type=str,
+                        default=".", help="Token to end text")
     parser.add_argument("--pairs_path", type=str, default="")
 
-    parser.add_argument('--data_path', type=str, default='/home/work/Datasets/MSR-VTT/examples/video7157.mp4')
+    parser.add_argument('--data_path', type=str,
+                        default='/home/work/Datasets/MSR-VTT/examples/video7157.mp4')
     parser.add_argument('--run_type',
                         default='caption_images',
                         nargs='?',
                         choices=['caption_images', 'caption_videos'])
     return parser
+
 
 def filter_video(image_fts, similiarities):
     THRESHOLD = 0.9
@@ -79,6 +91,7 @@ def filter_video(image_fts, similiarities):
 
     return torch.stack(result_features), selected_indices
 
+
 def get_clip_video_frames(video_path, clip_preprocess):
     cap = cv2.VideoCapture(video_path)
     FPS = cap.get(cv2.CAP_PROP_FPS)
@@ -104,63 +117,76 @@ def get_clip_video_frames(video_path, clip_preprocess):
 
     return images
 
+
 def get_clip_image(image_path, clip_preprocess):
     images = torch.cat([clip_preprocess(Image.open(image_path)).unsqueeze(0)])
 
     return images
 
+
 def get_clip_images(image_paths, clip_preprocess):
-    images = torch.cat([clip_preprocess(Image.open(p)).unsqueeze(0) for p in image_paths])
+    images = torch.cat([clip_preprocess(Image.open(p)).unsqueeze(0)
+                       for p in image_paths])
 
     return images
+
 
 def run_video(args, video_path):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     text_generator = CLIPTextGenerator(**vars(args))
 
-    video_frames = get_clip_video_frames(video_path, text_generator.clip_preprocess).to(device)
+    video_frames = get_clip_video_frames(
+        video_path, text_generator.clip_preprocess).to(device)
 
     with torch.no_grad():
         frames_fts = text_generator.clip.encode_image(video_frames).detach()
         frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()
 
         similiarities = frames_fts @ frames_fts.T
-        image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
+        image_fts, selected_frames_indices = filter_video(
+            frames_fts, similiarities)
 
-    clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = text_generator.generate(image_fts)
+    clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = text_generator.generate(
+        image_fts)
 
     print(clip_sorted_captions)
 
     return clip_sorted_captions[0]
+
 
 def run_image(args, image_path):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     text_generator = CLIPTextGenerator(**vars(args))
 
-    image = get_clip_image(image_path, text_generator.clip_preprocess).to(device)
+    image = get_clip_image(
+        image_path, text_generator.clip_preprocess).to(device)
 
     with torch.no_grad():
         image_fts = text_generator.clip.encode_image(image).detach()
         image_fts = torch.nn.functional.normalize(image_fts, dim=-1).detach()
 
-    clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = text_generator.generate(image_fts)
+    clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = text_generator.generate(
+        image_fts)
 
     print(clip_sorted_captions)
 
     return clip_sorted_captions[0]
 
+
 def run_images(args, image_paths):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     text_generator = CLIPTextGenerator(**vars(args))
 
-    video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)
+    video_frames = get_clip_images(
+        image_paths, text_generator.clip_preprocess).to(device)
 
     with torch.no_grad():
         frames_fts = text_generator.clip.encode_image(video_frames).detach()
         frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()
 
         similiarities = frames_fts @ frames_fts.T
-        image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
+        image_fts, selected_frames_indices = filter_video(
+            frames_fts, similiarities)
 
     clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = \
         text_generator.generate(image_fts)
@@ -169,9 +195,10 @@ def run_images(args, image_paths):
 
     return clip_sorted_captions[0]
 
+
 if __name__ == "__main__":
     torch.set_num_threads(12)
-    
+
     cli_args = get_parser().parse_args()
 
     dataset_folder = os.path.join("/mnt/hdd0", "ActivityNet/v1.3", "frames")
@@ -194,7 +221,7 @@ if __name__ == "__main__":
             category = splits[0]
             class_number = splits[1]
             label_dict[class_number] = category
-    
+
     frame_width = 16
 
     for datum in data_json[6:]:
@@ -210,9 +237,11 @@ if __name__ == "__main__":
             end_index = int(segments[t_i + 2])
             cli_args.label = label
             print(identity, label, start_index, end_index)
-            for s_i in range(start_index, end_index + 1, frame_width):
-                image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
-                            for f_i in range(s_i, min(s_i + frame_width, end_index) + 1)]
-                captions = run_images(cli_args, image_paths)
-                print(captions)
-                exit()
+            # for s_i in range(start_index, end_index + 1, frame_width):
+            sampled_frames = np.linspace(
+                start_index, end_index, num=frame_width, dtype=np.int32)
+            image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
+                           for f_i in sampled_frames]
+            captions = run_images(cli_args, image_paths)
+            print(captions)
+            exit()

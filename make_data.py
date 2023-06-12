@@ -195,6 +195,8 @@ if __name__ == "__main__":
             class_number = splits[1]
             label_dict[class_number] = category
     
+    frame_width = 16
+
     for datum in data_json[6:]:
         splits = datum.split()
         identity = splits[0]
@@ -207,9 +209,10 @@ if __name__ == "__main__":
             start_index = int(segments[t_i + 1])
             end_index = int(segments[t_i + 2])
             cli_args.label = label
-            image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
-                           for f_i in range(start_index, end_index + 1)]
             print(identity, label, start_index, end_index)
-            captions = run_images(cli_args, image_paths)
-            print(captions)
-            exit()
+            for s_i in range(start_index, end_index + 1, frame_width)
+                image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
+                            for f_i in range(s_i, min(s_i + frame_width, end_index) + 1)]
+                captions = run_images(cli_args, image_paths)
+                print(captions)
+                exit()

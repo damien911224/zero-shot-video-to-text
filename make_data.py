@@ -171,7 +171,7 @@ def run_images(args, image_paths):
 
 if __name__ == "__main__":
     torch.set_num_threads(12)
-
+    
     cli_args = get_parser().parse_args()
 
     dataset_folder = os.path.join("/mnt/hdd0", "ActivityNet/v1.3", "frames")
@@ -194,9 +194,7 @@ if __name__ == "__main__":
             category = splits[0]
             class_number = splits[1]
             label_dict[class_number] = category
-
-    import random
-    random.shuffle(data_json)
+    
     for datum in data_json:
         splits = datum.split()
         identity = splits[0]
@@ -211,7 +209,7 @@ if __name__ == "__main__":
             cli_args.label = label
             image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
                            for f_i in range(start_index, end_index + 1)]
-            print(label, start_index, end_index)
+            print(identity, label, start_index, end_index)
             captions = run_images(cli_args, image_paths)
             print(captions)
             exit()

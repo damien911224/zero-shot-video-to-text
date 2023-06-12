@@ -106,7 +106,6 @@ class CLIPTextGenerator:
             print('using label prompts...')
             str_label = " ".join(label.lower().split("_"))
             self.context_options = ['Video of {} shows'.format(str_label)]
-            print(self.context_options)
             prompt_len = len(self.context_options[0].split(" "))
             # self.context_options = [""]
             # prompt_len = 0
@@ -123,7 +122,8 @@ class CLIPTextGenerator:
         test_prefixes = [self.context_prefix + choice for choice in self.context_options]
         test_generated_tokens = self.lm_tokenizer.batch_encode_plus(
             test_prefixes, return_tensors='pt', return_attention_mask=False, padding=True)["input_ids"].to(self.device)
-        prefix_len = prompt_len + 1
+        # prefix_len = prompt_len + 1
+        prefix_len = test_generated_tokens.shape[1]
         assert test_generated_tokens.shape[1] == prefix_len, \
             f"All appended context options must be of exactly length {prefix_len}!"
 

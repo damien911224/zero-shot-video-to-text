@@ -22,7 +22,7 @@ def get_parser():
     parser.add_argument("--lm_model", type=str, default="gpt-2", help="gpt-2 or gpt-neo")
     parser.add_argument("--db_filter_path", type=str, default=None, help="file to filter db items, e.g karpathy split")
     parser.add_argument("--clip_checkpoints", type=str, default="./clip_checkpoints", help="path to CLIP")
-    parser.add_argument("--target_seq_length", type=int, default=30)
+    parser.add_argument("--target_seq_length", type=int, default=64)
     parser.add_argument("--cond_text", type=str, default="Image of a")
     parser.add_argument("--token_wise", action="store_true", help="Should we step the optimization at each token gen")
     parser.add_argument("--num_dummy_tokens", type=int, default=5)

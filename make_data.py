@@ -162,9 +162,9 @@ def run_images(args, image_paths):
         similiarities = frames_fts @ frames_fts.T
         image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
 
-        a = text_generator.get_txt_features([cli_args.label])
-        print(image_fts.shape)
-        exit()
+        label_ft = text_generator.get_txt_features([cli_args.label])
+
+        image_fts = torch.concat((image_fts, label_ft[0].unsqueeze(0)), dim=0)
 
     clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = \
         text_generator.generate(image_fts)

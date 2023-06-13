@@ -159,8 +159,9 @@ def run_images(args, image_paths):
         frames_fts = text_generator.clip.encode_image(video_frames).detach()
         frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()
 
-        similiarities = frames_fts @ frames_fts.T
-        image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
+        # similiarities = frames_fts @ frames_fts.T
+        # image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
+        image_fts = frames_fts
 
         label_ft = text_generator.get_txt_features([cli_args.label])
 

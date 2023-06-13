@@ -163,7 +163,7 @@ def run_images(args, image_paths):
         image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
 
         a = text_generator.get_txt_features([cli_args.label])
-        print(a[0].shape)
+        print(image_fts.shape)
         exit()
 
     clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = \

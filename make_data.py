@@ -164,9 +164,9 @@ def run_images(args, image_paths):
 
         label_ft = text_generator.get_txt_features([cli_args.label])
 
-        image_fts = torch.concat((image_fts, label_ft[0].unsqueeze(0).repeat(len(image_fts), 1)), dim=0)
+        # image_fts = torch.concat((image_fts, label_ft[0].unsqueeze(0).repeat(len(image_fts), 1)), dim=0)
         # image_fts = image_fts + label_ft[0].unsqueeze(0)
-        # image_fts = image_fts / image_fts.norm(dim=-1, keepdim=True)
+        image_fts = image_fts / image_fts.norm(dim=-1, keepdim=True)
 
     clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = \
         text_generator.generate(image_fts)
@@ -201,7 +201,7 @@ if __name__ == "__main__":
             class_number = splits[1]
             label_dict[class_number] = category
     
-    frame_width = 64
+    frame_width = 256
 
     for datum in data_json[6:]:
         splits = datum.split()

@@ -162,6 +162,10 @@ def run_images(args, image_paths):
         similiarities = frames_fts @ frames_fts.T
         image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
 
+        a = text_generator.clip.encode_text([cli_args.label])
+        print(a.shape)
+        exit()
+
     clip_sorted_captions, mixed_sorted_captions, decoded_options, beam_caps = \
         text_generator.generate(image_fts)
 

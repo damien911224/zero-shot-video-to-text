@@ -12,6 +12,7 @@ import sys
 from tqdm import tqdm
 import numpy as np
 import cv2
+from tqdm import tqdm
 from PIL import Image
 
 def get_parser():
@@ -202,9 +203,17 @@ if __name__ == "__main__":
             class_number = splits[1]
             label_dict[class_number] = category
     
-    frame_width = 64
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    text_generator = CLIPTextGenerator(**vars(cli_args))
 
-    for datum in data_json[6:]:
+    maximum_frame_width = 1024
+    clip_feature_folder = os.path.join("/mnt/hdd0", "ActivityNet/v1.3", "clip_features")
+    try:
+        os.mkdir(clip_feature_folder)
+    except OSError:
+        pass
+
+    for datum in tqdm(data_json):
         splits = datum.split()
         identity = splits[0]
         frame_length = splits[1]
@@ -216,11 +225,21 @@ if __name__ == "__main__":
             start_index = int(segments[t_i + 1])
             end_index = int(segments[t_i + 2])
             cli_args.label = label
-            print(identity, label, start_index, end_index)
+
             # for s_i in range(start_index, end_index + 1, frame_width):
-            sampled_frames = np.linspace(start_index, end_index, num=frame_width, dtype=np.int32)
-            image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i))
-                        for f_i in sampled_frames]
-            captions = run_images(cli_args, image_paths)
-            print(captions)
-            exit()
+            if maximum_frame_width > end_index - start_index + 1:
+                sampled_frames = np.linspace(start_index, end_index, num=frame_width, dtype=np.int32)
+            else:
+                sampled_frames = np.arange(start_index, end_index)
+            image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in sampled_frames]
+            
+            video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)
+            frames_fts = text_generator.clip.encode_image(video_frames).detach()
+            frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()
+            
+            # similiarities = frames_fts @ frames_fts.T
+            # image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
+            image_fts = frames_fts
+            avg_fts = torch.mean(image_fts, dim=0).cpu().numpy()
+            feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
+            np.save(feature_path, avg_fts)

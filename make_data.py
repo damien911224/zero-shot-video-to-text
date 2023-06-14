@@ -213,7 +213,7 @@ if __name__ == "__main__":
     except OSError:
         pass
 
-    for datum in tqdm(data_json):
+    for d_i, datum in enumerate(data_json):
         splits = datum.split()
         identity = splits[0]
         frame_length = splits[1]
@@ -243,3 +243,5 @@ if __name__ == "__main__":
             avg_fts = torch.mean(image_fts, dim=0).cpu().numpy()
             feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
             np.save(feature_path, avg_fts)
+        
+        print("{} Done ... {:05d}/{:05d}".format(identity, d_i + 1, len(data_json)))

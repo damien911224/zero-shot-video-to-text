@@ -234,7 +234,7 @@ if __name__ == "__main__":
             # image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in sampled_frames]
             entire_fts = list()
             for f_i in range(start_index, end_index, 16):
-                image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in range(f_i, min(f_i + 16, end_index))]
+                image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in range(f_i, min(f_i + 16, end_index + 1))]
                 video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)
                 frames_fts = text_generator.clip.encode_image(video_frames).detach()
                 frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()

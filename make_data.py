@@ -243,7 +243,7 @@ if __name__ == "__main__":
                 # image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
                 image_fts = frames_fts
                 entire_fts.append(image_fts.mean(dim=0).cpu())
-            avg_fts = torch.mean(entire_fts, dim=0).numpy()
+            avg_fts = torch.mean(torch.stack(entire_fts), dim=0).numpy()
             feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
             np.save(feature_path, avg_fts)
         

@@ -206,7 +206,7 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     text_generator = CLIPTextGenerator(**vars(cli_args))
 
-    maximum_frame_width = 128
+    maximum_frame_width = 64
     clip_feature_folder = os.path.join("/mnt/hdd0", "ActivityNet/v1.3", "clip_features")
     try:
         os.mkdir(clip_feature_folder)

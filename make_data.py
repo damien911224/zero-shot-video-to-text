@@ -227,20 +227,23 @@ if __name__ == "__main__":
             cli_args.label = label
 
             # for s_i in range(start_index, end_index + 1, frame_width):
-            if maximum_frame_width > end_index - start_index + 1:
-                sampled_frames = np.linspace(start_index, end_index, num=maximum_frame_width, dtype=np.int32)
-            else:
-                sampled_frames = np.arange(start_index, end_index + 1)
-            image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in sampled_frames]
+            # if maximum_frame_width > end_index - start_index + 1:
+                # sampled_frames = np.linspace(start_index, end_index, num=maximum_frame_width, dtype=np.int32)
+            # else:
+                # sampled_frames = np.arange(start_index, end_index + 1)
+            # image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in sampled_frames]
+            entire_fts = list()
+            for f_i in range(start_index, end_index, 16):
+                image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in range(f_i, min(f_i + 16, end_index))]
+                video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)
+                frames_fts = text_generator.clip.encode_image(video_frames).detach()
+                frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()
             
-            video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)
-            frames_fts = text_generator.clip.encode_image(video_frames).detach()
-            frames_fts = torch.nn.functional.normalize(frames_fts, dim=-1).detach()
-            
-            # similiarities = frames_fts @ frames_fts.T
-            # image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
-            image_fts = frames_fts
-            avg_fts = torch.mean(image_fts, dim=0).cpu().numpy()
+                # similiarities = frames_fts @ frames_fts.T
+                # image_fts, selected_frames_indices = filter_video(frames_fts, similiarities)
+                image_fts = frames_fts
+                entire_fts.append(image_fts.mean(dim=0).cpu())
+            avg_fts = torch.mean(entire_fts, dim=0).numpy()
             feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
             np.save(feature_path, avg_fts)
         

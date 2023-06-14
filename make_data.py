@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
             # for s_i in range(start_index, end_index + 1, frame_width):
             if maximum_frame_width > end_index - start_index + 1:
-                sampled_frames = np.linspace(start_index, end_index, num=frame_width, dtype=np.int32)
+                sampled_frames = np.linspace(start_index, end_index, num=maximum_frame_width, dtype=np.int32)
             else:
                 sampled_frames = np.arange(start_index, end_index + 1)
             image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in sampled_frames]

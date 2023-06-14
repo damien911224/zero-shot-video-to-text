@@ -230,7 +230,7 @@ if __name__ == "__main__":
             if maximum_frame_width > end_index - start_index + 1:
                 sampled_frames = np.linspace(start_index, end_index, num=frame_width, dtype=np.int32)
             else:
-                sampled_frames = np.arange(start_index, end_index)
+                sampled_frames = np.arange(start_index, end_index + 1)
             image_paths = [os.path.join(this_data_folder, "img_{:05d}.jpg".format(f_i)) for f_i in sampled_frames]
             
             video_frames = get_clip_images(image_paths, text_generator.clip_preprocess).to(device)

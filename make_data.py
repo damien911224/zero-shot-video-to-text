@@ -215,19 +215,22 @@ if __name__ == "__main__":
         pass
 
     for d_i, identity in enumerate(meta_dict["database"].keys()):
+        this_db = meta_dict["database"][identity]
+        if this_db["subset"] != "training":
+            continue
         this_data_folder = os.path.join(dataset_folder, identity, "images")
         frame_length = len(glob.glob(os.path.join(this_data_folder, "*.jpg")))
-        annotations = meta_dict["database"][identity]["annotations"]
+        annotations = this_db["annotations"]
         for anno in annotations:
             # class_id = segments[t_i]
             # label = label_dict[class_id]
             label = anno["label"]
-            start_index = round((anno["segment"][0] / anno["duration"]) * (frame_length - 1)) + 1
-            end_index = round((anno["segment"][1] / anno["duration"]) * (frame_length - 1)) + 1
+            start_index = round((anno["segment"][0] / this_db["duration"]) * (frame_length - 1)) + 1
+            end_index = round((anno["segment"][1] / this_db["duration"]) * (frame_length - 1)) + 1
             print(label, start_index, end_index)
             exit()
             cli_args.label = label
-            label_ft = text_generator.get_txt_features([cli_args.label])
+            label_ft = text_generator.get_txt_features([cli_args.label.lower()])
 
             # for s_i in range(start_index, end_index + 1, frame_width):
             # if maximum_frame_width > end_index - start_index + 1:

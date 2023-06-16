@@ -227,6 +227,8 @@ if __name__ == "__main__":
             label = anno["label"]
             start_index = round((anno["segment"][0] / this_db["duration"]) * (frame_length - 1)) + 1
             end_index = round((anno["segment"][1] / this_db["duration"]) * (frame_length - 1)) + 1
+            if end_index < start_index:
+                continue
             cli_args.label = label
             label_ft = text_generator.get_txt_features([cli_args.label.lower()])
 

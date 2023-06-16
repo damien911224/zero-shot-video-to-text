@@ -250,7 +250,7 @@ if __name__ == "__main__":
                 image_fts = frames_fts
                 entire_fts.append(image_fts.mean(dim=0).cpu())
             avg_fts = torch.mean(torch.stack(entire_fts), dim=0).numpy()
-            avg_fts = torch.cat((label_ft[0], avg_fts), dim=-1)
+            avg_fts = torch.cat((label_ft[0].detach().cpu().numpy(), avg_fts), dim=-1)
             feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
             np.save(feature_path, avg_fts)
         

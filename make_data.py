@@ -14,6 +14,7 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 from PIL import Image
+import glob
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -213,18 +214,20 @@ if __name__ == "__main__":
     except OSError:
         pass
 
-    for d_i, datum in enumerate(data_json):
-        splits = datum.split()
-        identity = splits[0]
-        frame_length = splits[1]
-        segments = splits[2:]
+    for d_i, identity in enumerate(meta_dict["database"].keys()):
         this_data_folder = os.path.join(dataset_folder, identity, "images")
-        for t_i in range(0, len(segments), 3):
-            class_id = segments[t_i]
-            label = label_dict[class_id]
-            start_index = int(segments[t_i + 1])
-            end_index = int(segments[t_i + 2])
+        frame_length = len(glob.glob(os.path.join(this_data_folder, "*.jpg")))
+        annotations = meta_dict["database"][identity]["annotations"]
+        for anno in annotations:
+            # class_id = segments[t_i]
+            # label = label_dict[class_id]
+            label = anno["label"]
+            start_index = round((anno["segment"][0] / anno["duration"]) * (frame_length - 1)) + 1
+            end_index = round((anno["segment"][1] / anno["duration"]) * (frame_length - 1)) + 1
+            print(label, start_index, end_index)
+            exit()
             cli_args.label = label
+            label_ft = text_generator.get_txt_features([cli_args.label])
 
             # for s_i in range(start_index, end_index + 1, frame_width):
             # if maximum_frame_width > end_index - start_index + 1:
@@ -244,6 +247,7 @@ if __name__ == "__main__":
                 image_fts = frames_fts
                 entire_fts.append(image_fts.mean(dim=0).cpu())
             avg_fts = torch.mean(torch.stack(entire_fts), dim=0).numpy()
+            avg_fts = torch.cat((label_ft, avg_fts), dim=-1)
             feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
             np.save(feature_path, avg_fts)
         

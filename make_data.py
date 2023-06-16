@@ -254,4 +254,4 @@ if __name__ == "__main__":
             feature_path = os.path.join(clip_feature_folder, "{}_{:05d}_{:05d}.npy".format(identity, start_index, end_index))
             np.save(feature_path, avg_fts)
         
-        print("{} Done ... {:05d}/{:05d}".format(identity, d_i + 1, len(data_json)))
+        print("{} Done ... {:05d}/{:05d}".format(identity, d_i + 1, len(meta_dict["database"].keys())))

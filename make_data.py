@@ -220,13 +220,15 @@ if __name__ == "__main__":
             continue
         this_data_folder = os.path.join(dataset_folder, identity, "images")
         frame_length = len(glob.glob(os.path.join(this_data_folder, "*.jpg")))
+        if not frame_length:
+            continue
         annotations = this_db["annotations"]
         for anno in annotations:
             # class_id = segments[t_i]
             # label = label_dict[class_id]
             label = anno["label"]
-            start_index = round((anno["segment"][0] / this_db["duration"]) * (frame_length - 1)) + 1
-            end_index = round((anno["segment"][1] / this_db["duration"]) * (frame_length - 1)) + 1
+            start_index = round(min((anno["segment"][0] / this_db["duration"]), 1.0) * (frame_length - 1)) + 1
+            end_index = round(min((anno["segment"][1] / this_db["duration"]), 1.0) * (frame_length - 1)) + 1
             if end_index < start_index:
                 continue
             cli_args.label = label
